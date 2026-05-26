@@ -4,98 +4,110 @@ on:
   push:
     branches: [ master, main ]
   pull_request:
-    branches: [ master, main ] # Compiles automatically when features are ready to merge
+    branches: [ master, main ]
+
+# Added defaults so every single command automatically runs inside your app folder
+defaults:
+  run:
+    working-directory: ./anticipate-app
 
 jobs:
   ci-checks:
-    name:  Linter & Unit Tests
+    name: 🧪 Linter & Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - name:  Checkout code
+      - name: 🏗️ Checkout code
         uses: actions/checkout@v4
 
-      - name:  Setup Node.js
+      - name: 🏗️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: './anticipate-app/package-lock.json'
 
-      - name:  Install dependencies
+      - name: 📦 Install dependencies
         run: npm ci
 
-      - name:  Run Linter
+      - name: 🧹 Run Linter
         run: npm run lint
         continue-on-error: true
 
-      - name:  Run Tests
+      - name: 🧪 Run Tests
         run: npm test -- --watchAll=false
         continue-on-error: true
 
   publish-expo-go:
-    name:  Push to Expo Go (Free & Unlimited)
+    name: 🚀 Push to Expo Go (Free & Unlimited)
     needs: ci-checks
     runs-on: ubuntu-latest
     steps:
-      - name:  Checkout code
+      - name: 🏗️ Checkout code
         uses: actions/checkout@v4
 
-      - name:  Setup Node.js
+      - name: 🏗️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: './anticipate-app/package-lock.json'
 
-      - name:  Install dependencies
+      - name: 📦 Install dependencies
         run: npm ci
 
-      - name:  Setup Expo
+      - name: 🚀 Setup Expo
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+          # Crucial: Tells the Expo action where your app configuration (app.json) lives
+          working-directory: ./anticipate-app
 
-      - name:  Publish Update
+      - name: 📱 Publish Update
         run: eas update --branch production --auto-policy=runtimeVersion
 
   build-android-apk:
-    name:  Compile & Store Android APK
+    name: 🤖 Compile & Store Android APK
     needs: ci-checks
     runs-on: ubuntu-latest
     steps:
-      - name:  Checkout code
+      - name: 🏗️ Checkout code
         uses: actions/checkout@v4
 
-      - name:  Setup Node.js
+      - name: 🏗️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: './anticipate-app/package-lock.json'
 
-      - name:  Install dependencies
+      - name: 📦 Install dependencies
         run: npm ci
 
-      - name:  Optimize VM Memory (Prevents Crashes)
-        # This increases the virtual swap file on the GitHub runner so complex 
-        # Android compilation doesn't hit an Out-Of-Memory error.
+      - name: ⚙️ Optimize VM Memory (Prevents Crashes)
+        # We bypass the default working directory here because swap space must be configured at the root system level
+        working-directory: /
         run: |
           sudo swapoff -a
           sudo dd if=/dev/zero of=/swapfile bs=1G count=4
           sudo mkswap /swapfile
           sudo swapon /swapfile
 
-      - name:  Setup Expo
+      - name: 🚀 Setup Expo
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+          working-directory: ./anticipate-app
 
-      - name:  Build Android APK Locally
-        # Setting the explicit output path guarantees we can find it for the artifact upload
+      - name: 🔨 Build Android APK Locally
+        # Kept the output in the subfolder so the local bundler handles asset compilation easily
         run: eas build --platform android --profile preview --local --non-interactive --output=./app-release.apk
 
-      - name:  Upload APK to GitHub Artifacts
+      - name: 📦 Upload APK to GitHub Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: apk-history-run-${{ github.run_number }} # Gives every single build a unique history number
-          path: ./app-release.apk
-          retention-days: 7 # Stores each historical binary file for 7 days
+          name: apk-history-run-${{ github.run_number }}
+          # Adjusted path to point directly inside your subfolder where the APK was dropped
+          path: ./anticipate-app/app-release.apk
+          retention-days: 7
