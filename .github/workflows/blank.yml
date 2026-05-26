@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ master, main ]
 
-# Added defaults so every single command automatically runs inside your app folder
 defaults:
   run:
     working-directory: ./anticipate-app
@@ -60,11 +59,12 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-          # Crucial: Tells the Expo action where your app configuration (app.json) lives
           working-directory: ./anticipate-app
 
       - name: 📱 Publish Update
-        run: eas update --auto --non-interactive
+        run: eas update --auto
+        env:
+          CI: true
 
   build-android-apk:
     name: 🤖 Compile & Store Android APK
@@ -84,8 +84,13 @@ jobs:
       - name: 📦 Install dependencies
         run: npm ci
 
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: ⚙️ Optimize VM Memory (Prevents Crashes)
-        # We bypass the default working directory here because swap space must be configured at the root system level
         working-directory: /
         run: |
           sudo swapoff -a
@@ -101,13 +106,11 @@ jobs:
           working-directory: ./anticipate-app
 
       - name: 🔨 Build Android APK Locally
-        # Kept the output in the subfolder so the local bundler handles asset compilation easily
         run: eas build --platform android --profile preview --local --non-interactive --output=./app-release.apk
 
       - name: 📦 Upload APK to GitHub Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: apk-history-run-${{ github.run_number }}
-          # Adjusted path to point directly inside your subfolder where the APK was dropped
           path: ./anticipate-app/app-release.apk
           retention-days: 7
