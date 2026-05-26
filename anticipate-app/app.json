@@ -15,7 +15,8 @@
       "url": "https://u.expo.dev/411a3e45-c69b-4159-8fcd-e66199cbde59"
     },
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.universityteam.anticipate"
     },
     "android": {
       "adaptiveIcon": {
