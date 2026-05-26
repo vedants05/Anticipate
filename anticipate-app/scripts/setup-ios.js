@@ -1,52 +1,36 @@
-// Pre-creates the SPM workspace-state.json for expo-modules-jsi so that
-// the `Build ExpoModulesJSI xcframework` Xcode build phase doesn't fail
-// with "Could not resolve package dependencies".
+// Patches expo-modules-jsi's build-xcframework.sh to remove the
+// -disableAutomaticPackageResolution flag from its nested xcodebuild call.
 //
-// Root cause: the build phase script uses -disableAutomaticPackageResolution,
-// which requires an existing workspace-state.json. In CI, EAS re-runs npm ci
-// in a fresh temp dir, so the file is never there. Running swift package
-// resolve here (during the npm lifecycle) creates it in the right place.
-const { execSync } = require('child_process');
+// Root cause: the flag requires an existing .swiftpm/workspace-state.json.
+// In CI, EAS re-runs npm ci in a UUID-keyed temp dir every build, so no
+// workspace state ever exists. For a package with dependencies:[], automatic
+// resolution is a no-op (nothing to fetch), so removing the flag is safe and
+// directly unblocks the build.
 const path = require('path');
 const fs = require('fs');
 
 function setup() {
   if (process.platform !== 'darwin') return;
 
-  const jsiDir = path.join(__dirname, '..', 'node_modules', 'expo-modules-jsi', 'apple');
-  if (!fs.existsSync(jsiDir)) return;
+  const scriptPath = path.join(
+    __dirname, '..', 'node_modules', 'expo-modules-jsi',
+    'apple', 'scripts', 'build-xcframework.sh'
+  );
+  if (!fs.existsSync(scriptPath)) return;
 
-  const swiftpmDir = path.join(jsiDir, '.swiftpm');
-  const stateFile = path.join(swiftpmDir, 'workspace-state.json');
-  if (fs.existsSync(stateFile)) return;
+  const original = fs.readFileSync(scriptPath, 'utf8');
+  const patched = original.replace(
+    /^    -disableAutomaticPackageResolution \\\n/m,
+    ''
+  );
 
-  fs.mkdirSync(swiftpmDir, { recursive: true });
-
-  try {
-    execSync('swift package resolve', {
-      cwd: jsiDir,
-      env: { ...process.env, PODS_ROOT: '/tmp', RN_ROOT: '/tmp' },
-      stdio: 'pipe',
-    });
-    console.log('[setup-ios] ExpoModulesJSI SPM workspace pre-resolved');
-  } catch (_) {
-    // swift unavailable or wrong version — write a minimal valid state directly.
-    // For a package with dependencies:[], this is always the correct content.
-    const emptyState = {
-      object: {
-        artifacts: [],
-        dependencies: [],
-        identityResolver: { kind: 'default' },
-        mirrors: [],
-        packages: [],
-        pins: [],
-        version: 6,
-      },
-      version: 6,
-    };
-    fs.writeFileSync(stateFile, JSON.stringify(emptyState, null, 2) + '\n');
-    console.log('[setup-ios] ExpoModulesJSI SPM workspace state initialized (fallback)');
+  if (patched === original) {
+    // Flag already removed (re-entrant call or future version changed the script)
+    return;
   }
+
+  fs.writeFileSync(scriptPath, patched);
+  console.log('[setup-ios] Patched build-xcframework.sh: removed -disableAutomaticPackageResolution');
 }
 
 setup();
