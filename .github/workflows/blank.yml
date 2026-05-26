@@ -118,28 +118,36 @@ jobs:
   build-ios-simulator:
     name: 🍎 Compile & Store iOS Simulator Build
     needs: ci-checks
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: 🔄 Checkout code
         uses: actions/checkout@v4
-        
+
+      - name: 🔧 Select Xcode version
+        run: sudo xcode-select -s /Applications/Xcode_16.3.app
+
       - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
           cache-dependency-path: './anticipate-app/package-lock.json'
-          
+
       - name: 📦 Install dependencies
         run: npm ci
-        
+
+      - name: 🧹 Clear Xcode SPM cache
+        run: |
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+          rm -rf ~/Library/Caches/org.swift.swiftpm
+
       - name: 🔧 Setup Expo
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
           working-directory: ./anticipate-app
-          
+
       - name: 🏗️ Build iOS Simulator Locally
         run: eas build --platform ios --profile simulator --local --non-interactive --output=./app-simulator.tar.gz
         
