@@ -64,7 +64,7 @@ jobs:
           working-directory: ./anticipate-app
 
       - name: 📱 Publish Update
-        run: eas update --branch production --auto-policy=runtimeVersion
+        run: eas update --branch production --platform all --non-interactive
 
   build-android-apk:
     name: 🤖 Compile & Store Android APK
