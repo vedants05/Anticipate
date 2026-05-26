@@ -5,7 +5,8 @@
   "build": {
     "simulator": {
       "ios": {
-        "simulator": true
+        "simulator": true,
+        "buildConfiguration": "Debug"
       }
     },
     "preview": {
