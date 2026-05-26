@@ -19,8 +19,14 @@ function setup() {
   if (!fs.existsSync(scriptPath)) return;
 
   const original = fs.readFileSync(scriptPath, 'utf8');
-  const patched = original.replace(
+  let patched = original.replace(
     /^    -disableAutomaticPackageResolution \\\n/m,
+    ''
+  );
+  // Also remove -quiet so the full xcodebuild output appears in the build log,
+  // which lets us see the actual error when the build fails in CI.
+  patched = patched.replace(
+    /^    -quiet \\\n/m,
     ''
   );
 
