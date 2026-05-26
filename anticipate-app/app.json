@@ -8,6 +8,12 @@
     "icon": "./assets/images/icon.png",
     "scheme": "anticipateapp",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/411a3e45-c69b-4159-8fcd-e66199cbde59"
+    },
     "ios": {
       "icon": "./assets/expo.icon"
     },
