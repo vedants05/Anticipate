@@ -151,13 +151,13 @@ jobs:
       - name: 🏗️ Build iOS Simulator Locally
         run: eas build --platform ios --profile simulator --local --non-interactive --output=./app-simulator.tar.gz
 
-      - name: 📋Collect Xcode build log on failure
+      - name: 📋 Collect Xcode build log on failure
         if: failure()
         run: |
           mkdir -p /tmp/xcode-logs
-          find /var/folders -path "*/eas-build-local-nodejs/*/logs/*.log" 2>/dev/null | while read f; do
-            cp "$f" /tmp/xcode-logs/ 2>/dev/null || true
-          done
+          find "$TMPDIR" -name "*.log" -path "*/eas-build-local-nodejs/*" 2>/dev/null \
+            -exec cp {} /tmp/xcode-logs/ \; || true
+          ls -la /tmp/xcode-logs/ || echo "No logs collected"
 
       - name: 📋 Upload Xcode build log on failure
         if: failure()
